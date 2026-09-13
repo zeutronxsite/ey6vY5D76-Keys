@@ -7,14 +7,36 @@ local playerGui = player:WaitForChild("PlayerGui")
 -- ============ CONFIG ============
 local KEY_SCRIPT_URL = "https://raw.githubusercontent.com/zeutronxsite/hrZyx4kUT-KeyG/refs/heads/main/Generator.luau"
 local VERIFY_SCRIPT_URL = "https://raw.githubusercontent.com/zeutronxsite/F4DiY9yZ9Safety/refs/heads/main/yXLHkaN70yMain"
-local PASTEBIN_LINK = "https://pastebin.com/YourPastebin"
+local PASTEBIN_LINK = "https://pastebin.com/Ty4rds"
 local SAVE_FILE = "KeySystem_Save.txt"
 -- =================================
 
--- Check saved key
+-- Check saved key with 12-hour expiration logic
 local savedKey = nil
+local isKeyExpired = false
+
 if isfile and isfile(SAVE_FILE) then
-    savedKey = readfile(SAVE_FILE)
+    local fileContent = readfile(SAVE_FILE)
+    -- Format penyimpanan baru: KEY|TIMESTAMP
+    local key, timestamp = fileContent:match("^(.-)|(%d+)$")
+    
+    if key and timestamp then
+        local currentTime = os.time()
+        local keyAge = currentTime - tonumber(timestamp)
+        local expirationLimit = 12 * 60 * 60 -- 12 jam dalam detik (43200 detik)
+        
+        if keyAge > expirationLimit then
+            isKeyExpired = true
+            if delfile then delfile(SAVE_FILE) end
+            savedKey = nil
+        else
+            savedKey = key
+        end
+    else
+        -- Jika format file lama (tanpa timestamp), hapus agar user generate key baru
+        if delfile then delfile(SAVE_FILE) end
+        savedKey = nil
+    end
 end
 
 -- Create ScreenGui
@@ -195,7 +217,7 @@ local KeyInput = Instance.new("TextBox")
 KeyInput.Size = UDim2.new(1, -20, 1, 0)
 KeyInput.Position = UDim2.new(0, 10, 0, 0)
 KeyInput.BackgroundTransparency = 1
-KeyInput.Text = ""
+KeyInput.Text = savedKey or ""
 KeyInput.PlaceholderText = "Enter your key here..."
 KeyInput.PlaceholderColor3 = Color3.fromRGB(90, 90, 90)
 KeyInput.TextColor3 = Color3.fromRGB(220, 220, 220)
@@ -217,10 +239,8 @@ KeyInput.FocusLost:Connect(function()
     }):Play()
     
     if KeyInput.Text ~= "" then
+        -- Saat user mengetik manual, kita update savedKey (tanpa timestamp baru, asumsi user mengetik key yang valid)
         savedKey = KeyInput.Text
-        if writefile then
-            writefile(SAVE_FILE, savedKey)
-        end
     end
 end)
 
@@ -229,8 +249,16 @@ local StatusLabel = Instance.new("TextLabel")
 StatusLabel.Size = UDim2.new(1, -40, 0, 22)
 StatusLabel.Position = UDim2.new(0, 20, 0, 143)
 StatusLabel.BackgroundTransparency = 1
-StatusLabel.Text = ""
-StatusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+
+-- Tampilkan peringatan jika key sebelumnya expired saat UI dibuka
+if isKeyExpired then
+    StatusLabel.Text = "⚠️ key is expired! Please GET KEY again"
+    StatusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+else
+    StatusLabel.Text = ""
+    StatusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+end
+
 StatusLabel.TextSize = 12
 StatusLabel.Font = Enum.Font.Gotham
 StatusLabel.TextXAlignment = Enum.TextXAlignment.Center
@@ -377,7 +405,6 @@ addClickEffect(PastebinBtn)
 addClickEffect(CloseBtn)
 
 -- ============ KEY VALIDATION FUNCTION ============
--- ============ KEY VALIDATION FUNCTION ============
 local function isValidKey(key)
     if not key or key == "" then 
         return false 
@@ -389,7 +416,6 @@ local function isValidKey(key)
     end
     
     -- Pattern 2: KEY-XXXXXX-XXXXXX-XXXXXX (Format dari Key Generator)
-    -- Menerima huruf A-Z (besar/kecil) dan angka 0-9
     if string.match(key, "^KEY%-[A-Za-z0-9][A-Za-z0-9][A-Za-z0-9][A-Za-z0-9][A-Za-z0-9][A-Za-z0-9]%-[A-Za-z0-9][A-Za-z0-9][A-Za-z0-9][A-Za-z0-9][A-Za-z0-9][A-Za-z0-9]%-[A-Za-z0-9][A-Za-z0-9][A-Za-z0-9][A-Za-z0-9][A-Za-z0-9][A-Za-z0-9]$") then
         return true
     end
@@ -425,10 +451,16 @@ GetKeyBtn.MouseButton1Click:Connect(function()
     
     if success and result and type(result) == "string" then
         local newKey = result
+        local currentTime = tostring(os.time())
+        
+        -- Simpan Key DENGAN Timestamp (Format: KEY|WAKTU)
+        local dataToSave = newKey .. "|" .. currentTime
+        
         savedKey = newKey
+        isKeyExpired = false -- Reset status expired
         
         if writefile then
-            writefile(SAVE_FILE, newKey)
+            writefile(SAVE_FILE, dataToSave)
         end
         
         KeyInput.Text = newKey
@@ -463,6 +495,14 @@ VerifyBtn.MouseButton1Click:Connect(function()
         return
     end
     
+    -- CEK KADALUARSA: Jika tidak ada savedKey yang valid, paksa user untuk GET KEY
+    if not savedKey or savedKey == "" or isKeyExpired then
+        StatusLabel.Text = "⚠️ Key expired or invalid! Please GET KEY again."
+        StatusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+        KeyInput.Text = ""
+        return
+    end
+
     -- VALIDASI FORMAT KEY
     if not isValidKey(keyToVerify) then
         StatusLabel.Text = "X Invalid key format!"
@@ -497,6 +537,7 @@ VerifyBtn.MouseButton1Click:Connect(function()
     task.wait(1)
     StatusLabel.Text = "✓ Access granted!, Please Wait...."
     task.wait(1)
+    
     local success, result = pcall(function()
         local verifyscript = loadstring(game:HttpGet(VERIFY_SCRIPT_URL))()
         return verifyscript
