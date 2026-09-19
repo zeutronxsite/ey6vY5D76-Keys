@@ -1,5 +1,7 @@
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
+local HttpService = game:GetService("HttpService")
+local TeleportService = game:GetService("TeleportService")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -9,23 +11,42 @@ local KEY_SCRIPT_URL = "https://raw.githubusercontent.com/zeutronxsite/hrZyx4kUT
 local VERIFY_SCRIPT_URL = "https://raw.githubusercontent.com/zeutronxsite/F4DiY9yZ9Safety/refs/heads/main/yXLHkaN70yMain"
 local PASTEBIN_LINK = "https://pastebin.com/Ty4rds"
 local SAVE_FILE = "KeySystem_Save.txt"
+local REDEEM_TRACKER_URL = "https://your-backend-api.com/redeem"
+
+local LIFETIME_KEYS = {
+    "KEYLIFE-VuTSnhp4s-sJVoJGiE",
+    "KEYTIME-zGHzmsXBj-rub7q9aE",
+    "KEY-NsheRJF2CN-nMFFZ7uHcS"
+}
 -- =================================
 
--- Check saved key with 12-hour expiration logic
+local function isLifetimeKey(key)
+    if not key then return false end
+    for _, lk in ipairs(LIFETIME_KEYS) do
+        if key == lk then return true end
+    end
+    if string.sub(key, 1, 9) == "LIFETIME-" then
+        return true
+    end
+    return false
+end
+
 local savedKey = nil
 local isKeyExpired = false
 
 if isfile and isfile(SAVE_FILE) then
     local fileContent = readfile(SAVE_FILE)
-    -- Format penyimpanan baru: KEY|TIMESTAMP
     local key, timestamp = fileContent:match("^(.-)|(%d+)$")
     
     if key and timestamp then
         local currentTime = os.time()
         local keyAge = currentTime - tonumber(timestamp)
-        local expirationLimit = 12 * 60 * 60 -- 12 jam dalam detik (43200 detik)
+        local expirationLimit = 6 * 60 * 60
         
-        if keyAge > expirationLimit then
+        if isLifetimeKey(key) then
+            isKeyExpired = false
+            savedKey = key
+        elseif keyAge > expirationLimit then
             isKeyExpired = true
             if delfile then delfile(SAVE_FILE) end
             savedKey = nil
@@ -33,7 +54,6 @@ if isfile and isfile(SAVE_FILE) then
             savedKey = key
         end
     else
-        -- Jika format file lama (tanpa timestamp), hapus agar user generate key baru
         if delfile then delfile(SAVE_FILE) end
         savedKey = nil
     end
@@ -49,8 +69,8 @@ ScreenGui.Parent = playerGui
 -- Main Frame
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 580, 0, 360)
-MainFrame.Position = UDim2.new(0.5, -290, 0.5, -180)
+MainFrame.Size = UDim2.new(0, 520, 0, 380)
+MainFrame.Position = UDim2.new(0.5, -260, 0.5, -190)
 MainFrame.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
 MainFrame.BorderSizePixel = 0
 MainFrame.ClipsDescendants = true
@@ -74,71 +94,13 @@ Overlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 Overlay.BackgroundTransparency = 0.4
 Overlay.Parent = MainFrame
 
--- ============ PARTICLE CONTAINER ============
-local ParticleContainer = Instance.new("Frame")
-ParticleContainer.Name = "Particles"
-ParticleContainer.Size = UDim2.new(1, 0, 1, 0)
-ParticleContainer.BackgroundTransparency = 1
-ParticleContainer.ClipsDescendants = true
-ParticleContainer.Parent = MainFrame
-
--- Partikel GARIS PUTIH TURUN
-for i = 1, 20 do
-    local Line = Instance.new("Frame")
-    Line.Size = UDim2.new(0, 1, 0, math.random(30, 70))
-    Line.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    Line.BorderSizePixel = 0
-    Line.AnchorPoint = Vector2.new(0.5, 0)
-    Line.Position = UDim2.new(math.random() * 0.95 + 0.025, 0, -0.15, 0)
-    Line.BackgroundTransparency = 0.6
-    Line.Parent = ParticleContainer
-    
-    spawn(function()
-        while Line.Parent do
-            local duration = math.random(5, 10)
-            local tween = TweenService:Create(Line, TweenInfo.new(duration, Enum.EasingStyle.Linear), {
-                Position = UDim2.new(Line.Position.X.Scale, 0, 1.2, 0)
-            })
-            tween:Play()
-            tween.Completed:Wait()
-            Line.Position = UDim2.new(math.random() * 0.95 + 0.025, 0, -0.15, 0)
-        end
-    end)
-end
-
--- Partikel TITIK UNGU
-for i = 1, 15 do
-    local Particle = Instance.new("Frame")
-    Particle.Size = UDim2.new(0, 2, 0, 2)
-    Particle.BackgroundColor3 = Color3.fromRGB(150, 100, 255)
-    Particle.BorderSizePixel = 0
-    Particle.AnchorPoint = Vector2.new(0.5, 0.5)
-    Particle.Position = UDim2.new(math.random(), 0, math.random(), 0)
-    Particle.Parent = ParticleContainer
-    
-    local ParticleCorner = Instance.new("UICorner")
-    ParticleCorner.CornerRadius = UDim.new(1, 0)
-    ParticleCorner.Parent = Particle
-    
-    spawn(function()
-        while Particle.Parent do
-            local tween = TweenService:Create(Particle, TweenInfo.new(math.random(4, 7), Enum.EasingStyle.Linear), {
-                Position = UDim2.new(math.random(), 0, math.random(), 0),
-                BackgroundTransparency = math.random(0, 6) / 10
-            })
-            tween:Play()
-            tween.Completed:Wait()
-        end
-    end)
-end
-
--- ============ LOGO (PROFILE AVATAR PLAYER) ============
+-- Logo (Profile Avatar Player)
 local LogoFrame = Instance.new("Frame")
-LogoFrame.Size = UDim2.new(0, 80, 0, 80)
-LogoFrame.Position = UDim2.new(0, 20, 0, 55)
+LogoFrame.Size = UDim2.new(0, 50, 0, 50)
+LogoFrame.Position = UDim2.new(0, 20, 0, 20)
 LogoFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
 LogoFrame.BorderSizePixel = 0
-LogoFrame.Visible = false -- Sembunyikan dulu sampai gambar load
+LogoFrame.Visible = false
 LogoFrame.Parent = MainFrame
 
 local LogoCorner = Instance.new("UICorner")
@@ -150,7 +112,6 @@ LogoStroke.Color = Color3.fromRGB(70, 70, 70)
 LogoStroke.Thickness = 1.5
 LogoStroke.Parent = LogoFrame
 
--- Logo Image - Menggunakan Avatar Player
 local LogoImage = Instance.new("ImageLabel")
 LogoImage.Size = UDim2.new(1, -10, 1, -10)
 LogoImage.Position = UDim2.new(0, 5, 0, 5)
@@ -158,7 +119,6 @@ LogoImage.BackgroundTransparency = 1
 LogoImage.ScaleType = Enum.ScaleType.Crop
 LogoImage.Parent = LogoFrame
 
--- Dapatkan thumbnail avatar player
 local success, thumbnailUrl = pcall(function()
     local url, isReady = Players:GetUserThumbnailAsync(player.UserId, Enum.ThumbnailType.AvatarThumbnail, Enum.ThumbnailSize.Size420x420)
     return url
@@ -168,38 +128,37 @@ if success and thumbnailUrl then
     LogoImage.Image = thumbnailUrl
     LogoFrame.Visible = true
 else
-    -- Fallback jika gagal mengambil thumbnail
     LogoImage.Image = "rbxassetid://0"
     LogoFrame.Visible = true
 end
 
--- ============ TITLE & SUBTITLE ============
+-- Title & Subtitle
 local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(0, 350, 0, 32)
-Title.Position = UDim2.new(0, 115, 0, 20)
+Title.Size = UDim2.new(0, 350, 0, 28)
+Title.Position = UDim2.new(0, 80, 0, 15)
 Title.BackgroundTransparency = 1
 Title.Text = "Key System"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.TextSize = 26
+Title.TextSize = 22
 Title.Font = Enum.Font.GothamBold
 Title.TextXAlignment = Enum.TextXAlignment.Left
 Title.Parent = MainFrame
 
 local Subtitle = Instance.new("TextLabel")
-Subtitle.Size = UDim2.new(0, 350, 0, 18)
-Subtitle.Position = UDim2.new(0, 115, 0, 52)
+Subtitle.Size = UDim2.new(0, 350, 0, 16)
+Subtitle.Position = UDim2.new(0, 80, 0, 43)
 Subtitle.BackgroundTransparency = 1
 Subtitle.Text = "Enter or generate your key to access scripts"
 Subtitle.TextColor3 = Color3.fromRGB(140, 140, 140)
-Subtitle.TextSize = 12
+Subtitle.TextSize = 11
 Subtitle.Font = Enum.Font.Gotham
 Subtitle.TextXAlignment = Enum.TextXAlignment.Left
 Subtitle.Parent = MainFrame
 
--- ============ KEY INPUT (TextBox) ============
+-- Key Input (TextBox)
 local InputFrame = Instance.new("Frame")
-InputFrame.Size = UDim2.new(0, 430, 0, 38)
-InputFrame.Position = UDim2.new(0, 115, 0, 95)
+InputFrame.Size = UDim2.new(0, 480, 0, 36)
+InputFrame.Position = UDim2.new(0, 20, 0, 75)
 InputFrame.BackgroundColor3 = Color3.fromRGB(22, 22, 22)
 InputFrame.BorderSizePixel = 0
 InputFrame.Parent = MainFrame
@@ -226,7 +185,6 @@ KeyInput.Font = Enum.Font.Gotham
 KeyInput.TextXAlignment = Enum.TextXAlignment.Left
 KeyInput.Parent = InputFrame
 
--- Input focus effects
 KeyInput.Focused:Connect(function()
     TweenService:Create(InputStroke, TweenInfo.new(0.2), {
         Color = Color3.fromRGB(120, 60, 220)
@@ -237,51 +195,48 @@ KeyInput.FocusLost:Connect(function()
     TweenService:Create(InputStroke, TweenInfo.new(0.2), {
         Color = Color3.fromRGB(55, 55, 55)
     }):Play()
-    
     if KeyInput.Text ~= "" then
-        -- Saat user mengetik manual, kita update savedKey (tanpa timestamp baru, asumsi user mengetik key yang valid)
         savedKey = KeyInput.Text
     end
 end)
 
--- ============ STATUS LABEL ============
+-- Status Label
 local StatusLabel = Instance.new("TextLabel")
-StatusLabel.Size = UDim2.new(1, -40, 0, 22)
-StatusLabel.Position = UDim2.new(0, 20, 0, 143)
+StatusLabel.Size = UDim2.new(1, -40, 0, 20)
+StatusLabel.Position = UDim2.new(0, 20, 0, 120)
 StatusLabel.BackgroundTransparency = 1
 
--- Tampilkan peringatan jika key sebelumnya expired saat UI dibuka
 if isKeyExpired then
-    StatusLabel.Text = "⚠️ key is expired! Please GET KEY again"
+    StatusLabel.Text = "⚠️ Key is expired! Please GET KEY again"
     StatusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
 else
     StatusLabel.Text = ""
     StatusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
 end
 
-StatusLabel.TextSize = 12
+StatusLabel.TextSize = 11
 StatusLabel.Font = Enum.Font.Gotham
 StatusLabel.TextXAlignment = Enum.TextXAlignment.Center
 StatusLabel.Parent = MainFrame
 
--- ============ BUTTON CONTAINER ============
-local ButtonContainer = Instance.new("Frame")
-ButtonContainer.Size = UDim2.new(1, -40, 0, 42)
-ButtonContainer.Position = UDim2.new(0, 20, 0, 175)
-ButtonContainer.BackgroundTransparency = 1
-ButtonContainer.Parent = MainFrame
+-- Button Container untuk GET KEY dan VERIFY
+local TopButtonContainer = Instance.new("Frame")
+TopButtonContainer.Size = UDim2.new(1, -40, 0, 36)
+TopButtonContainer.Position = UDim2.new(0, 20, 0, 150)
+TopButtonContainer.BackgroundTransparency = 1
+TopButtonContainer.Parent = MainFrame
 
 -- Get Key Button
 local GetKeyBtn = Instance.new("TextButton")
-GetKeyBtn.Size = UDim2.new(0.48, 0, 1, 0)
+GetKeyBtn.Size = UDim2.new(0.485, 0, 1, 0)
 GetKeyBtn.Position = UDim2.new(0, 0, 0, 0)
 GetKeyBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 GetKeyBtn.Text = "🔑 GET KEY"
 GetKeyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-GetKeyBtn.TextSize = 14
+GetKeyBtn.TextSize = 13
 GetKeyBtn.Font = Enum.Font.GothamBold
 GetKeyBtn.BorderSizePixel = 0
-GetKeyBtn.Parent = ButtonContainer
+GetKeyBtn.Parent = TopButtonContainer
 
 local GetKeyCorner = Instance.new("UICorner")
 GetKeyCorner.CornerRadius = UDim.new(0, 7)
@@ -294,15 +249,15 @@ GetKeyStroke.Parent = GetKeyBtn
 
 -- Verify Button
 local VerifyBtn = Instance.new("TextButton")
-VerifyBtn.Size = UDim2.new(0.48, 0, 1, 0)
-VerifyBtn.Position = UDim2.new(0.52, 0, 0, 0)
+VerifyBtn.Size = UDim2.new(0.485, 0, 1, 0)
+VerifyBtn.Position = UDim2.new(0.515, 0, 0, 0)
 VerifyBtn.BackgroundColor3 = Color3.fromRGB(55, 25, 110)
 VerifyBtn.Text = "✅ VERIFY"
 VerifyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-VerifyBtn.TextSize = 14
+VerifyBtn.TextSize = 13
 VerifyBtn.Font = Enum.Font.GothamBold
 VerifyBtn.BorderSizePixel = 0
-VerifyBtn.Parent = ButtonContainer
+VerifyBtn.Parent = TopButtonContainer
 
 local VerifyCorner = Instance.new("UICorner")
 VerifyCorner.CornerRadius = UDim.new(0, 7)
@@ -315,12 +270,12 @@ VerifyStroke.Parent = VerifyBtn
 
 -- Pastebin Link Button
 local PastebinBtn = Instance.new("TextButton")
-PastebinBtn.Size = UDim2.new(1, -40, 0, 38)
-PastebinBtn.Position = UDim2.new(0, 20, 0, 230)
+PastebinBtn.Size = UDim2.new(1, -40, 0, 36)
+PastebinBtn.Position = UDim2.new(0, 20, 0, 195)
 PastebinBtn.BackgroundColor3 = Color3.fromRGB(25, 70, 110)
 PastebinBtn.Text = "📋 PASTEBIN LINK"
 PastebinBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-PastebinBtn.TextSize = 13
+PastebinBtn.TextSize = 12
 PastebinBtn.Font = Enum.Font.GothamBold
 PastebinBtn.BorderSizePixel = 0
 PastebinBtn.Parent = MainFrame
@@ -334,26 +289,87 @@ PastebinStroke.Color = Color3.fromRGB(45, 100, 150)
 PastebinStroke.Thickness = 1
 PastebinStroke.Parent = PastebinBtn
 
+-- Bottom Button Container untuk REJOIN dan SERVER HOP
+local BottomButtonContainer = Instance.new("Frame")
+BottomButtonContainer.Size = UDim2.new(1, -40, 0, 36)
+BottomButtonContainer.Position = UDim2.new(0, 20, 0, 240)
+BottomButtonContainer.BackgroundTransparency = 1
+BottomButtonContainer.Parent = MainFrame
+
+-- Rejoin Button
+local RejoinBtn = Instance.new("TextButton")
+RejoinBtn.Size = UDim2.new(0.485, 0, 1, 0)
+RejoinBtn.Position = UDim2.new(0, 0, 0, 0)
+RejoinBtn.BackgroundColor3 = Color3.fromRGB(110, 25, 25)
+RejoinBtn.Text = "🔄 REJOIN"
+RejoinBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+RejoinBtn.TextSize = 12
+RejoinBtn.Font = Enum.Font.GothamBold
+RejoinBtn.BorderSizePixel = 0
+RejoinBtn.Parent = BottomButtonContainer
+
+local RejoinCorner = Instance.new("UICorner")
+RejoinCorner.CornerRadius = UDim.new(0, 7)
+RejoinCorner.Parent = RejoinBtn
+
+local RejoinStroke = Instance.new("UIStroke")
+RejoinStroke.Color = Color3.fromRGB(150, 45, 45)
+RejoinStroke.Thickness = 1
+RejoinStroke.Parent = RejoinBtn
+
+-- Server Hop Button
+local ServerHopBtn = Instance.new("TextButton")
+ServerHopBtn.Size = UDim2.new(0.485, 0, 1, 0)
+ServerHopBtn.Position = UDim2.new(0.515, 0, 0, 0)
+ServerHopBtn.BackgroundColor3 = Color3.fromRGB(25, 70, 110)
+ServerHopBtn.Text = "🌐 SERVER HOP"
+ServerHopBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ServerHopBtn.TextSize = 12
+ServerHopBtn.Font = Enum.Font.GothamBold
+ServerHopBtn.BorderSizePixel = 0
+ServerHopBtn.Parent = BottomButtonContainer
+
+local ServerHopCorner = Instance.new("UICorner")
+ServerHopCorner.CornerRadius = UDim.new(0, 7)
+ServerHopCorner.Parent = ServerHopBtn
+
+local ServerHopStroke = Instance.new("UIStroke")
+ServerHopStroke.Color = Color3.fromRGB(45, 100, 150)
+ServerHopStroke.Thickness = 1
+ServerHopStroke.Parent = ServerHopBtn
+
 -- Created by Text
 local CreatedByText = Instance.new("TextLabel")
-CreatedByText.Size = UDim2.new(1, -40, 0, 18)
-CreatedByText.Position = UDim2.new(0, 20, 0, 280)
+CreatedByText.Size = UDim2.new(1, -40, 0, 16)
+CreatedByText.Position = UDim2.new(0, 20, 0, 290)
 CreatedByText.BackgroundTransparency = 1
 CreatedByText.Text = "Created By Exterminate0"
 CreatedByText.TextColor3 = Color3.fromRGB(255, 255, 255)
-CreatedByText.TextSize = 11
+CreatedByText.TextSize = 10
 CreatedByText.Font = Enum.Font.GothamBold
 CreatedByText.TextXAlignment = Enum.TextXAlignment.Center
 CreatedByText.Parent = MainFrame
 
+-- Server ID Label (Pojok Kiri Bawah)
+local ServerIdLabel = Instance.new("TextLabel")
+ServerIdLabel.Size = UDim2.new(0, 280, 0, 16)
+ServerIdLabel.Position = UDim2.new(0, 15, 1, -22)
+ServerIdLabel.BackgroundTransparency = 1
+ServerIdLabel.Text = "Server ID: " .. tostring(game.JobId)
+ServerIdLabel.TextColor3 = Color3.fromRGB(90, 90, 90)
+ServerIdLabel.TextSize = 9
+ServerIdLabel.Font = Enum.Font.Gotham
+ServerIdLabel.TextXAlignment = Enum.TextXAlignment.Left
+ServerIdLabel.Parent = MainFrame
+
 -- Close Button (X)
 local CloseBtn = Instance.new("TextButton")
-CloseBtn.Size = UDim2.new(0, 30, 0, 30)
-CloseBtn.Position = UDim2.new(1, -40, 0, 10)
+CloseBtn.Size = UDim2.new(0, 28, 0, 28)
+CloseBtn.Position = UDim2.new(1, -38, 0, 10)
 CloseBtn.BackgroundColor3 = Color3.fromRGB(45, 25, 25)
 CloseBtn.Text = "X"
 CloseBtn.TextColor3 = Color3.fromRGB(255, 90, 90)
-CloseBtn.TextSize = 15
+CloseBtn.TextSize = 14
 CloseBtn.Font = Enum.Font.GothamBold
 CloseBtn.BorderSizePixel = 0
 CloseBtn.Parent = MainFrame
@@ -366,6 +382,33 @@ local CloseStroke = Instance.new("UIStroke")
 CloseStroke.Color = Color3.fromRGB(90, 45, 45)
 CloseStroke.Thickness = 1
 CloseStroke.Parent = CloseBtn
+
+-- ============ FUNCTION TO DESTROY UI SMOOTHLY ============
+local function destroyUI()
+    local fadeTween = TweenService:Create(MainFrame, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+        BackgroundTransparency = 1
+    })
+    fadeTween:Play()
+    
+    for _, child in pairs(MainFrame:GetChildren()) do
+        if child:IsA("GuiObject") then
+            pcall(function()
+                TweenService:Create(child, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                    BackgroundTransparency = 1,
+                    TextTransparency = 1,
+                    ImageTransparency = 1
+                }):Play()
+            end)
+        end
+    end
+    
+    task.wait(0.5)
+    
+    if ScreenGui and ScreenGui.Parent then
+        ScreenGui:Destroy()
+    end
+    print("✓ Key System verified and destroyed!")
+end
 
 -- ============ HOVER & CLICK EFFECTS ============
 local function addHoverEffect(button, hoverColor, normalColor)
@@ -384,6 +427,8 @@ end
 addHoverEffect(GetKeyBtn, Color3.fromRGB(55, 55, 55), Color3.fromRGB(38, 38, 38))
 addHoverEffect(VerifyBtn, Color3.fromRGB(75, 35, 140), Color3.fromRGB(55, 25, 110))
 addHoverEffect(PastebinBtn, Color3.fromRGB(35, 90, 140), Color3.fromRGB(25, 70, 110))
+addHoverEffect(RejoinBtn, Color3.fromRGB(140, 35, 35), Color3.fromRGB(110, 25, 25))
+addHoverEffect(ServerHopBtn, Color3.fromRGB(35, 90, 140), Color3.fromRGB(25, 70, 110))
 addHoverEffect(CloseBtn, Color3.fromRGB(70, 35, 35), Color3.fromRGB(45, 25, 25))
 
 local function addClickEffect(button)
@@ -402,46 +447,34 @@ end
 addClickEffect(GetKeyBtn)
 addClickEffect(VerifyBtn)
 addClickEffect(PastebinBtn)
+addClickEffect(RejoinBtn)
+addClickEffect(ServerHopBtn)
 addClickEffect(CloseBtn)
 
 -- ============ KEY VALIDATION FUNCTION ============
 local function isValidKey(key)
-    if not key or key == "" then 
-        return false 
-    end
+    if not key or key == "" then return false end
     
-    -- Pattern 1: EXTERM-123456-7890
-    if string.match(key, "^EXTERM%-%d%d%d%d%d%d%-%d%d%d%d$") then
-        return true
-    end
+    if string.match(key, "^EXTERM%-%d%d%d%d%d%d%-%d%d%d%d$") then return true end
     
-    -- Pattern 2: KEY-XXXXXX-XXXXXX-XXXXXX (Format dari Key Generator)
-    if string.match(key, "^KEY%-[A-Za-z0-9][A-Za-z0-9][A-Za-z0-9][A-Za-z0-9][A-Za-z0-9][A-Za-z0-9]%-[A-Za-z0-9][A-Za-z0-9][A-Za-z0-9][A-Za-z0-9][A-Za-z0-9][A-Za-z0-9]%-[A-Za-z0-9][A-Za-z0-9][A-Za-z0-9][A-Za-z0-9][A-Za-z0-9][A-Za-z0-9]$") then
-        return true
-    end
-    
-    -- Pattern yang lebih sederhana untuk KEY-XXXXXX-XXXXXX-XXXXXX
     if string.match(key, "^KEY%-%w+%-%w+%-%w+$") then
         local parts = {}
         for part in string.gmatch(key, "([^%-]+)") do
             table.insert(parts, part)
         end
-        
-        -- Harus ada 4 parts (KEY + 3 bagian)
-        if #parts == 4 then
-            -- Setiap bagian harus 6 karakter
-            if #parts[2] == 6 and #parts[3] == 6 and #parts[4] == 6 then
-                return true
-            end
+        if #parts == 4 and #parts[2] == 6 and #parts[3] == 6 and #parts[4] == 6 then
+            return true
         end
     end
+    
+    if isLifetimeKey(key) then return true end
     
     return false
 end
 
 -- ============ GET KEY FUNCTION ============
 GetKeyBtn.MouseButton1Click:Connect(function()
-    StatusLabel.Text = ""
+    StatusLabel.Text = "🔄 Execute Key Generator..."
     StatusLabel.TextColor3 = Color3.fromRGB(255, 200, 100)
     
     local success, result = pcall(function()
@@ -452,12 +485,10 @@ GetKeyBtn.MouseButton1Click:Connect(function()
     if success and result and type(result) == "string" then
         local newKey = result
         local currentTime = tostring(os.time())
-        
-        -- Simpan Key DENGAN Timestamp (Format: KEY|WAKTU)
         local dataToSave = newKey .. "|" .. currentTime
         
         savedKey = newKey
-        isKeyExpired = false -- Reset status expired
+        isKeyExpired = false
         
         if writefile then
             writefile(SAVE_FILE, dataToSave)
@@ -467,18 +498,17 @@ GetKeyBtn.MouseButton1Click:Connect(function()
         
         if setclipboard then
             setclipboard(newKey)
-            StatusLabel.Text = ""
+            StatusLabel.Text = "✓ Key generated & copied!"
             StatusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
         else
-            StatusLabel.Text = ""
+            StatusLabel.Text = "✓ Key generated!"
             StatusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
         end
         
-        GetKeyBtn.Text = ""
         task.wait(2)
-        GetKeyBtn.Text = ""
-    else
         StatusLabel.Text = ""
+    else
+        StatusLabel.Text = "⚠️ Failed to generate key!"
         StatusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
         task.wait(2)
         StatusLabel.Text = ""
@@ -495,7 +525,6 @@ VerifyBtn.MouseButton1Click:Connect(function()
         return
     end
     
-    -- CEK KADALUARSA: Jika tidak ada savedKey yang valid, paksa user untuk GET KEY
     if not savedKey or savedKey == "" or isKeyExpired then
         StatusLabel.Text = "⚠️ Key expired or invalid! Please GET KEY again."
         StatusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
@@ -503,45 +532,76 @@ VerifyBtn.MouseButton1Click:Connect(function()
         return
     end
 
-    -- VALIDASI FORMAT KEY
     if not isValidKey(keyToVerify) then
-        StatusLabel.Text = "X Invalid key format!"
+        StatusLabel.Text = "⚠️ Invalid key format!"
         StatusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
         
-        -- Shake animation
         local originalPos = InputFrame.Position
         for i = 1, 4 do
             TweenService:Create(InputFrame, TweenInfo.new(0.05), {
-                Position = UDim2.new(0, 115 + (i % 2 == 0 and -5 or 5), 0, 95)
+                Position = UDim2.new(0, 20 + (i % 2 == 0 and -5 or 5), 0, 75)
             }):Play()
             task.wait(0.05)
         end
         TweenService:Create(InputFrame, TweenInfo.new(0.05), {
             Position = originalPos
         }):Play()
-        
         return
     end
     
-    StatusLabel.Text = "🔄 Verifying..."
+    StatusLabel.Text = "🔄 Checking key availability..."
     StatusLabel.TextColor3 = Color3.fromRGB(255, 200, 100)
     
+    if REDEEM_TRACKER_URL ~= "https://your-backend-api.com/redeem" then
+        local checkSuccess, checkResult = pcall(function()
+            local encodedKey = HttpService:UrlEncode(keyToVerify)
+            local response = game:HttpGet(REDEEM_TRACKER_URL .. "?key=" .. encodedKey)
+            return HttpService:JSONDecode(response)
+        end)
+        
+        if checkSuccess and checkResult and checkResult.redeemed == true then
+            StatusLabel.Text = "⚠️ Key sudah digunakan player lain!"
+            StatusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+            if delfile then delfile(SAVE_FILE) end
+            savedKey = nil
+            KeyInput.Text = ""
+            return
+        end
+    end
+    
+    task.wait(1)
+    
+    StatusLabel.Text = "🔄 Verifying..."
     task.wait(1.5)
-    
-    StatusLabel.Text = "✓ Key verified successfully!"
-    StatusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
-    
-    VerifyBtn.Text = "✅ VERIFIED"
-    VerifyBtn.BackgroundColor3 = Color3.fromRGB(25, 90, 25)
-    
-    task.wait(1)
-    StatusLabel.Text = "✓ Access granted!, Please Wait...."
-    task.wait(1)
     
     local success, result = pcall(function()
         local verifyscript = loadstring(game:HttpGet(VERIFY_SCRIPT_URL))()
         return verifyscript
     end)
+    
+    if success then
+        StatusLabel.Text = "✓ Key verified successfully!"
+        StatusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+        VerifyBtn.Text = "✅ VERIFIED"
+        VerifyBtn.BackgroundColor3 = Color3.fromRGB(25, 90, 25)
+        
+        task.wait(1)
+        StatusLabel.Text = "✓ Access granted! Executing script..."
+        task.wait(1.5)
+        
+        if REDEEM_TRACKER_URL ~= "https://your-backend-api.com/redeem" then
+            pcall(function()
+                game:HttpPost(REDEEM_TRACKER_URL, HttpService:JSONEncode({key = keyToVerify, userId = player.UserId}))
+            end)
+        end
+        
+        -- HANCURKAN UI SECARA OTOMATIS SETELAH BERHASIL
+        destroyUI()
+        
+    else
+        StatusLabel.Text = "⚠️ Verification failed!"
+        StatusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+    end
 end)
 
 -- ============ PASTEBIN LINK ============
@@ -558,32 +618,48 @@ PastebinBtn.MouseButton1Click:Connect(function()
     end
 end)
 
+-- ============ REJOIN FUNCTION ============
+RejoinBtn.MouseButton1Click:Connect(function()
+    StatusLabel.Text = "🔄 Rejoining..."
+    task.wait(0.5)
+    TeleportService:Teleport(game.PlaceId, player)
+end)
+
+-- ============ SERVER HOP FUNCTION ============
+ServerHopBtn.MouseButton1Click:Connect(function()
+    StatusLabel.Text = "🔄 Finding new server..."
+    StatusLabel.TextColor3 = Color3.fromRGB(255, 200, 100)
+    
+    local PlaceId = game.PlaceId
+    local success, result = pcall(function()
+        local response = game:HttpGet("https://games.roblox.com/v1/games/" .. PlaceId .. "/servers/Public?sortOrder=Asc&limit=100")
+        local data = HttpService:JSONDecode(response)
+        local availableServers = {}
+        
+        for _, server in ipairs(data.data) do
+            if server.id ~= game.JobId and server.playing < server.maxPlayers then
+                table.insert(availableServers, server.id)
+            end
+        end
+        return availableServers
+    end)
+    
+    if success and #result > 0 then
+        local randomServer = result[math.random(1, #result)]
+        StatusLabel.Text = "🔄 Hopping to new server..."
+        task.wait(0.5)
+        TeleportService:TeleportToPlaceInstance(PlaceId, randomServer, player)
+    else
+        StatusLabel.Text = "⚠️ Failed to find available server!"
+        StatusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+        task.wait(2)
+        StatusLabel.Text = ""
+    end
+end)
+
 -- ============ CLOSE BUTTON ============
 CloseBtn.MouseButton1Click:Connect(function()
-    local fadeTween = TweenService:Create(MainFrame, TweenInfo.new(0.25), {
-        BackgroundTransparency = 1
-    })
-    fadeTween:Play()
-    
-    for _, child in pairs(MainFrame:GetChildren()) do
-        if child:IsA("GuiObject") then
-            pcall(function()
-                TweenService:Create(child, TweenInfo.new(0.25), {
-                    BackgroundTransparency = 1,
-                    TextTransparency = 1,
-                    ImageTransparency = 1
-                }):Play()
-            end)
-        end
-    end
-    
-    task.wait(0.3)
-    
-    if ScreenGui and ScreenGui.Parent then
-        ScreenGui:Destroy()
-    end
-    
-    print("✓ Key System closed!")
+    destroyUI()
 end)
 
 -- ============ DRAGGABLE ============
@@ -623,9 +699,9 @@ game:GetService("UserInputService").InputChanged:Connect(function(input)
 end)
 
 -- ============ ENTRANCE ANIMATION ============
-MainFrame.Position = UDim2.new(0.5, -290, 0.5, -230)
+MainFrame.Position = UDim2.new(0.5, -260, 0.5, -240)
 MainFrame.BackgroundTransparency = 1
 TweenService:Create(MainFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back), {
-    Position = UDim2.new(0.5, -290, 0.5, -180),
+    Position = UDim2.new(0.5, -260, 0.5, -190),
     BackgroundTransparency = 0
 }):Play()
