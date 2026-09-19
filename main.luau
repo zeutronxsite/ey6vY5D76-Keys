@@ -498,17 +498,17 @@ GetKeyBtn.MouseButton1Click:Connect(function()
         
         if setclipboard then
             setclipboard(newKey)
-            StatusLabel.Text = "✓ Key generated & copied!"
+            StatusLabel.Text = ""
             StatusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
         else
-            StatusLabel.Text = "✓ Key generated!"
+            StatusLabel.Text = ""
             StatusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
         end
         
         task.wait(2)
         StatusLabel.Text = ""
     else
-        StatusLabel.Text = "⚠️ Failed to generate key!"
+        StatusLabel.Text = ""
         StatusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
         task.wait(2)
         StatusLabel.Text = ""
